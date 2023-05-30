@@ -19,6 +19,11 @@ return new class extends Migration
             $table->string('password');
             $table->rememberToken();
             $table->timestamps();
+            $table->string('ci')->default('008');
+            $table->string('apellido_paterno')->default(null);
+            $table->string('apellido_materno')->default(null);
+            $table->string('rol')->default('cliente');
+            $table->date('fecha_nacimiento')->default(null);
         });
     }
 

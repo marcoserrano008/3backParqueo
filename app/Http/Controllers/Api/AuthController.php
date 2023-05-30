@@ -14,13 +14,17 @@ class AuthController extends Controller
 {
     public function signup(SignupRequest $request)
     {
+        date_default_timezone_set('America/Manaus');
         $data = $request->validated();
         /** @var \App\Models\User $user */
         $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => bcrypt($data['password']),
-
+            'ci' => $data['ci'],
+            'apellido_paterno' => $data['apellido_paterno'],
+            'apellido_materno' => $data['apellido_materno'],
+            'fecha_nacimiento' => $data['fecha_nacimiento'],
         ]);
 
         $token = $user->createToken('main')->plainTextToken;
@@ -51,5 +55,11 @@ class AuthController extends Controller
         return response('', 204);
     }
 
-
+    public function getRol()
+    {
+        $user = Auth::user();
+        $rol = $user->rol;
+        return ['rol' => $rol];
+    }
+    
 }
