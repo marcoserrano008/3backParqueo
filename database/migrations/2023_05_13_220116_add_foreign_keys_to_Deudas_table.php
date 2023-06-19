@@ -14,8 +14,9 @@ return new class extends Migration
     public function up()
     {
         Schema::table('Deudas', function (Blueprint $table) {
-            $table->foreign(['id_precio'], 'fk_deuda_precio')->references(['id_precio'])->on('Precios')->onUpdate('NO ACTION')->onDelete('NO ACTION');
+            
             $table->foreign(['id_salida'], 'fk_deuda_salida')->references(['id_salida'])->on('SalidasParqueo')->onUpdate('NO ACTION')->onDelete('NO ACTION');
+            $table->foreign(['id_cliente'], 'fk_deuda_cliente')->references(['id_cliente'])->on('Clientes')->onUpdate('NO ACTION')->onDelete('NO ACTION');
         });
     }
 
@@ -27,8 +28,8 @@ return new class extends Migration
     public function down()
     {
         Schema::table('Deudas', function (Blueprint $table) {
-            $table->dropForeign('fk_deuda_precio');
             $table->dropForeign('fk_deuda_salida');
+            $table->dropForeign('fk_deuda_cliente');
         });
     }
 };

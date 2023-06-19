@@ -24,6 +24,7 @@ return new class extends Migration
             $table->string('apellido_materno')->default(null);
             $table->string('rol')->default('cliente');
             $table->date('fecha_nacimiento')->default(null);
+            $table->string('celular')->default(null);
         });
     }
 

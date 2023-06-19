@@ -25,6 +25,7 @@ class AuthController extends Controller
             'apellido_paterno' => $data['apellido_paterno'],
             'apellido_materno' => $data['apellido_materno'],
             'fecha_nacimiento' => $data['fecha_nacimiento'],
+            'celular' => $data['celular'],
         ]);
 
         $token = $user->createToken('main')->plainTextToken;

@@ -25,4 +25,13 @@ class Ingreso extends Model
 
     public $timestamps = false;
 
+    public function vehiculo()
+    {
+        return $this->belongsTo('App\Models\Vehiculo', 'id_vehiculo');
+    }
+
+    public function salida()
+    {
+        return $this->hasOne('App\Models\Salida', 'id_ingreso');
+    }
 }

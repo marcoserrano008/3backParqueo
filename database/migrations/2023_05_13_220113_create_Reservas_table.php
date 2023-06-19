@@ -30,6 +30,11 @@ return new class extends Migration
             $table->date('reservada_desde_fechaG2')->nullable();
             $table->time('reservada_desde_horaG2')->nullable();
 
+            $table->string('tipo')->default(null)->nullable();
+            $table->double('costo')->default(null)->nullable();
+            $table->string('pagada')->default('no');
+            
+
         });
     }
 

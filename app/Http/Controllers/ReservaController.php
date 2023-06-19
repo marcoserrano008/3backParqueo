@@ -7,9 +7,11 @@ use App\Models\Reserva;
 use App\Models\Cliente;
 use App\Models\Vehiculo;
 use App\Models\Espacio;
+use App\Models\Cobro;
 use DateTime;
 use Illuminate\Support\Facades\DB;
-
+use Webmozart\Assert\InvalidArgumentException;
+use App\Models\User;
 class ReservaController extends Controller
 {
     public function createReserva(Request $request)
@@ -21,12 +23,16 @@ class ReservaController extends Controller
             'reservada_desde_fecha' => 'required',
             'reservada_desde_hora' => 'required',
             'duracion_minutos' => 'required',
+            'tipo' => 'required',
+            'costo' => 'required'
         ]);
 
         $id_espacio = $request->id_espacio;
         $id_usuario = auth()->user()->id;
         $reserva = new Reserva();
         $reserva->id_espacio = $id_espacio;
+        
+        $reserva->costo = $request->costo;
 
         $placa_vehiculo = $request->placa_vehiculo;
 
@@ -124,13 +130,177 @@ class ReservaController extends Controller
         $reserva->reservada_desde_fechaG2 = $fechaHoraG2->format('Y-m-d');
         $reserva->reservada_desde_horaG2 = $fechaHoraG2->format('H:i:s');
 
+        
+        $fechaHoraInicioReserva = $fechaHoraReserva;
+      
+
+        $reservaController = new ReservaController();
+        
+        $tipoReserva = $request->tipo;
+        switch($tipoReserva) {
+            case 'hora':
+                $costo = $reservaController->calcularCosto('hora', $fechaHoraInicioReserva, $fechaHoraFinReserva);
+                break;
+            case 'diario':
+                $costo = $reservaController->calcularCosto('diario', $fechaHoraInicioReserva, $fechaHoraFinReserva);
+                break;
+            case 'semanal':
+                $costo = $reservaController->calcularCosto('semanal', $fechaHoraInicioReserva, $fechaHoraFinReserva);
+                break;
+            case 'mensual':
+                $costo = $reservaController->calcularCosto('mensual', $fechaHoraInicioReserva, $fechaHoraFinReserva);
+                break;
+            default:
+                $costo = 69;
+        }
+
+        $reserva->costo = $costo;
+        $reserva->tipo = $tipoReserva;
+        $reserva->pagada = 'no';
+
         $reserva->save();
+        $reserva->refresh();
+
+        $datosUsuario = User::where('id', $id_usuario)->first();
+        $nombre = $datosUsuario->name . ' ' .$datosUsuario->apellido_paterno . ' ' . $datosUsuario->apellido_materno;
+        $rolUsuario = $datosUsuario->rol;
 
         return response([
             'status' => '1',
-            'msg' => 'Reserva satisfactoria',
+            'msg' => 'reserva exitosa',
+            'reserva' => [
+                'id_reserva' => $reserva->id_reserva, 
+                // 'costo' => $reserva->costo,
+                'nombre_usuario' => $nombre,
+                'rol' => $rolUsuario,
+            ],
         ]);
     }
+
+    public function obtenerReservasPorFecha (Request $request)
+    {
+        $desde_fecha = $request->input('desde_fecha');
+        $hasta_fecha = $request->input('hasta_fecha');
+    
+        $reservas = Reserva::with(['vehiculo'])
+            ->whereBetween('reservada_desde_fecha', [$desde_fecha, $hasta_fecha])
+            ->get()
+            ->map(function ($reserva) {
+                $usuario = User::where('id', $reserva->id_usuario)->first();
+                $nombre = $usuario->name . " " . $usuario->apellido_paterno . " " . $usuario->apellido_materno;
+                return [
+                    'id_reserva' => $reserva->id_reserva,
+                    'reservada_desde_fecha' => $reserva->reservada_desde_fecha,
+                    'reservada_desde_hora' => $reserva->reservada_desde_hora,
+                    'reservada_hasta_fecha' => $reserva->reservada_hasta_fecha,
+                    'reservada_hasta_hora' => $reserva->reservada_hasta_hora,
+                    'costo' => $reserva->costo,
+                    'placa' => $reserva->placa_vehiculo ?? $reserva->vehiculo->placa,
+                    'id_espacio' => $reserva->id_espacio,
+                    'usuario' => $nombre,
+                ];
+            });
+    
+        return response()->json($reservas);
+    }
+
+    public function obtenerReservasPorFechaEspacio (Request $request)
+    {
+        $desde_fecha = $request->input('desde_fecha');
+        $hasta_fecha = $request->input('hasta_fecha');
+        $id_espacio = $request->input('id_espacio');
+
+        $reservas = Reserva::with(['vehiculo'])->where('id_espacio',$id_espacio)
+            ->whereBetween('reservada_desde_fecha', [$desde_fecha, $hasta_fecha])
+            ->get()
+            ->map(function ($reserva) {
+                $usuario = User::where('id', $reserva->id_usuario)->first();
+                $nombre = $usuario->name . " " . $usuario->apellido_paterno . " " . $usuario->apellido_materno;
+                return [
+                    'id_reserva' => $reserva->id_reserva,
+                    'reservada_desde_fecha' => $reserva->reservada_desde_fecha,
+                    'reservada_desde_hora' => $reserva->reservada_desde_hora,
+                    'reservada_hasta_fecha' => $reserva->reservada_hasta_fecha,
+                    'reservada_hasta_hora' => $reserva->reservada_hasta_hora,
+                    'costo' => $reserva->costo,
+                    'placa' => $reserva->placa_vehiculo ?? $reserva->vehiculo->placa,
+                    'id_espacio' => $reserva->id_espacio,
+                    'usuario' => $nombre,
+                ];
+            });
+    
+        return response()->json($reservas);
+    }
+
+    public function calcularCosto($tipoReserva, DateTime $fechaHoraInicioReserva, DateTime $fechaHoraFinReserva) {
+        $diferencia = $fechaHoraInicioReserva->diff($fechaHoraFinReserva);
+    
+        switch($tipoReserva) {
+            case 'hora':
+                $horas = $diferencia->h;
+                if ($horas == 0) {
+                    $costo = 3;
+                } else {
+                    $costo = 3 + ($horas - 1) * 2;
+                    $minutos = $diferencia->i;
+                    if($minutos > 1){
+                        $costo = $costo + 2;
+                    }
+                }
+                break;
+            case 'diario':
+                $dias = $diferencia->d;
+                $costo = $dias * 30;
+                break;
+            case 'semanal':
+                $semanas = floor($diferencia->d / 7);
+                $costo = $semanas * 120;
+                break;
+            case 'mensual':
+                $meses = $diferencia->m + $diferencia->y * 12;
+                $costo = $meses * 350;
+                break;
+            default:
+                throw new InvalidArgumentException("Tipo de reserva desconocido: $tipoReserva");
+        }
+    
+        return $costo;
+    }
+    
+    public function pagarReserva(Request $request)
+    {
+        date_default_timezone_set('America/Manaus');
+
+        $id_reserva = $request->id_reserva;
+        $reserva = Reserva::where('id_reserva', $id_reserva)->first();
+        $reserva->pagada = 'si';
+        $reserva->save();
+
+        $fechaHoraActual = new DateTime();
+        $fechaCreada = $fechaHoraActual->format('Y-m-d');
+        $horaCreada = $fechaHoraActual->format('H:i:s');
+
+        $cobro = new Cobro();
+        $cobro->placa_vehiculo = $request->placa;
+        $cobro->fecha = $fechaCreada;
+        $cobro->hora = $horaCreada;
+        $cobro->origen = 'reserva';
+        $cobro->metodo = 'QR';
+        $cobro->id_origen = $id_reserva;
+        $cobro->id_usuario = $request->nombre_usuario;
+        $cobro->monto = $request->monto;
+        $cobro->save();
+
+        return response([
+            'status' => '1',
+            'msg' => 'reserva pagada',
+        ]);
+
+
+
+
+    }
+
 
     public function obtenerEspacio()
     {
@@ -150,8 +320,8 @@ class ReservaController extends Controller
             
             if($espacioLibre){
                 $reserva = Reserva::where('id_espacio', $espacio)
-                ->where('reservada_desde_fecha', '<=', $fechaActual)
-                ->where('reservada_desde_hora', '<=', $horaActual)
+                ->where('reservada_desde_fechaG2', '<=', $fechaActual)
+                ->where('reservada_desde_horaG2', '<=', $horaActual)
                 ->where('reservada_hasta_fecha', '>=', $fechaActual)
                 ->where('reservada_hasta_hora', '>=', $horaActual)
                 ->first();
@@ -170,8 +340,8 @@ class ReservaController extends Controller
                     $query->select(DB::raw(1))
                         ->from('Reservas')
                         ->whereColumn('Reservas.id_espacio', 'Espacios.id_espacio')
-                        ->where('reservada_desde_fecha', '<=', $fechaActual)
-                        ->where('reservada_desde_hora', '<=', $horaActual)
+                        ->where('reservada_desde_fechaG2', '<=', $fechaActual)
+                        ->where('reservada_desde_horaG2', '<=', $horaActual)
                         ->where('reservada_hasta_fecha', '>=', $fechaActual)
                         ->where('reservada_hasta_hora', '>=', $horaActual)
                         ->whereBetween('reservada_desde_fecha', [$fechaActual, date('Y-m-d', strtotime('+1 day', strtotime($fechaActual)))]);
@@ -249,13 +419,17 @@ class ReservaController extends Controller
     public function listReservas()
     {
         $id_usuario = auth()->user()->id; 
-        $reservas = Reserva::where('id_usuario', $id_usuario)->get();     
+        $reservas = Reserva::where(['id_usuario'=>$id_usuario, 'pagada'=>'si'])->get();     
         
         $reservas->each(function ($reserva){
             $reserva->makeHidden('id_vehiculo');
             $reserva->makeHidden('fecha_creada');
             $reserva->makeHidden('hora_creada');
-            $reserva->makeHidden('id_usuario');
+            $reserva->makeHidden('reservada_desde_fechaG1');
+            $reserva->makeHidden('reservada_desde_horaG1');
+            $reserva->makeHidden('reservada_desde_fechaG2');
+            $reserva->makeHidden('reservada_desde_horaG2');
+            $reserva->makeHidden('pagada');
             $idVehiculo = $reserva->id_vehiculo;
             if($idVehiculo){
                 $vehiculo = Vehiculo::where('id_vehiculo', $idVehiculo)->first();
@@ -270,6 +444,33 @@ class ReservaController extends Controller
         return $reservas;       
     }
 
+    public function listAllReservas()
+    {
+        $id_usuario = auth()->user()->id; 
+        $reservas = Reserva::where('pagada','si')->get();     
+        
+        $reservas->each(function ($reserva){
+            $reserva->makeHidden('id_vehiculo');
+            $reserva->makeHidden('fecha_creada');
+            $reserva->makeHidden('hora_creada');
+            $reserva->makeHidden('reservada_desde_fechaG1');
+            $reserva->makeHidden('reservada_desde_horaG1');
+            $reserva->makeHidden('reservada_desde_fechaG2');
+            $reserva->makeHidden('reservada_desde_horaG2');
+            $reserva->makeHidden('pagada');
+            $idVehiculo = $reserva->id_vehiculo;
+            if($idVehiculo){
+                $vehiculo = Vehiculo::where('id_vehiculo', $idVehiculo)->first();
+                $placaVehiculo = $vehiculo->placa;
+            }else{
+                $placaVehiculo = $reserva->placa_vehiculo;
+            }
+            $reserva->placa_vehiculo = $placaVehiculo;
+
+        });
+
+        return $reservas;       
+    }
 
 
     public function showReservaId($idReserva)
@@ -364,5 +565,45 @@ class ReservaController extends Controller
             ],404);
         }
     }
+
+    public function verificarReserva(Request $request)
+    {
+        date_default_timezone_set('America/Manaus');
+        
+        $placa = $request->placa;
+        $placa = strtoupper($placa);
+        $placa = str_replace([' ', '-'], '', $placa);
+
+        $fechaHoraActual = new DateTime();
+        $fechaActual = $fechaHoraActual->format('Y-m-d');
+        $horaActual = $fechaHoraActual->format('H:i:s');
+
+
+        $vehiculo = Vehiculo::where('placa', $placa)->first();
+        if($vehiculo){
+            $reserva = Reserva::where('id_vehiculo', $vehiculo->id_vehiculo)
+            ->where('reservada_desde_fechaG1', '<=', $fechaActual)
+            ->where('reservada_desde_horaG1', '<=', $horaActual)
+            ->first();
+
+
+        }else{
+            $reserva = Reserva::where('placa_vehiculo', $placa)
+            ->where('reservada_desde_fechaG1', '<=', $fechaActual)
+            ->where('reservada_desde_horaG1', '<=', $horaActual)
+            ->first();
+        }
+        if($reserva){
+            return [
+                "reserva" => 1,
+                "id_espacio" => $reserva->id_espacio,
+            ];
+        }else{
+            return [
+                "reserva" => 0,
+            ];
+        }
+    }
+
 
 }

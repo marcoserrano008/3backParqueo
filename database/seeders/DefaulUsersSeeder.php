@@ -27,6 +27,7 @@ class DefaulUsersSeeder extends Seeder
                 'rol' => 'guardia',
                 'fecha_nacimiento' => Carbon::parse('1990-01-01'),
                 'created_at' => '2023-01-01 01:01:01',
+                'celular' => '69459869',
             ],
             [
                 'name' => 'administrador',
@@ -38,6 +39,7 @@ class DefaulUsersSeeder extends Seeder
                 'rol' => 'administrador',
                 'fecha_nacimiento' => Carbon::parse('1990-01-01'),
                 'created_at' => '2023-01-01 01:01:01',
+                'celular' => '69459869',
             ],
             [
                 'name' => 'cliente',
@@ -49,6 +51,7 @@ class DefaulUsersSeeder extends Seeder
                 'rol' => 'cliente',
                 'fecha_nacimiento' => Carbon::parse('1990-01-01'),
                 'created_at' => '2023-01-01 01:01:01',
+                'celular' => '69459869',
             ],
 
 

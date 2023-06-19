@@ -7,6 +7,7 @@ use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use DateTime;
 
 class UserController extends Controller
 {
@@ -67,5 +68,34 @@ class UserController extends Controller
         $user->delete();
 
         return response("", 204);
+    }
+
+    public function getClientsByDate($start_date, $end_date)
+    {
+        $users = User::whereBetween('created_at', [$start_date, $end_date])
+                     ->where('rol', 'cliente')
+                     ->get();
+        
+        $result = [];
+        foreach ($users as $user) {
+            $dateOfBirth = new DateTime($user->fecha_nacimiento);
+            $now = new DateTime();
+            $interval = $dateOfBirth->diff($now);
+
+            $result[] = [
+                'id_cliente' => $user->id,
+                'nombre' => $user->name.' '.$user->apellido_paterno.' '.$user->apellido_materno,
+                'email' => $user->email,
+                'ci' => $user->ci,
+                'edad' => $interval->y
+            ];
+        }
+
+        return response()->json($result);
+    }
+
+    public function listAllUsers (){
+        $usuarios = User::get();
+        return $usuarios;
     }
 }

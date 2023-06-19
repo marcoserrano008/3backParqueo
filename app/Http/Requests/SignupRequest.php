@@ -36,6 +36,7 @@ class SignupRequest extends FormRequest
             'apellido_paterno' => 'required|string|max:20',
             'apellido_materno' => 'required|string|max:20',
             'fecha_nacimiento' => 'required',
+            'celular' => 'required',
         ];
     }
 }

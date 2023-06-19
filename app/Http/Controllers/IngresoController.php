@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Cobro;
 use App\Models\Ingreso;
+use App\Models\User;
 use Illuminate\Http\Request;
 use App\Models\Vehiculo;
 use App\Models\Espacio;
@@ -51,8 +53,8 @@ class IngresoController extends Controller
             $reserva = Reserva::where('id_vehiculo', $id_vehiculo)
             ->where('reservada_desde_fechaG1', '<=', $fechaIngreso)
             ->where('reservada_desde_horaG1', '<=', $horaIngreso)
-            ->where('reservada_hasta_fechaG1', '>=', $fechaIngreso)
-            ->where('reservada_hasta_horaG1', '>=', $horaIngreso)
+            ->where('reservada_hasta_fecha', '>=', $fechaIngreso)
+            ->where('reservada_hasta_hora', '>=', $horaIngreso)
             ->first();            
             
         } else {
@@ -161,5 +163,146 @@ class IngresoController extends Controller
         $primerEspacioLibre = Espacio::where('estado', 'libre')->get();
         return $primerEspacioLibre;        
     }
+    public function obtenerIngresosPorFecha(Request $request)
+    {
+        $desde_fecha = $request->input('desde_fecha');
+        $hasta_fecha = $request->input('hasta_fecha');
+    
+        $ingresos = Ingreso::with(['vehiculo', 'salida'])
+            ->whereBetween('fecha_ingreso', [$desde_fecha, $hasta_fecha])
+            ->get()
+            ->map(function ($ingreso) {
+                return [
+                    'id_ingreso' => $ingreso->id_ingreso,
+                    'hora_ingreso' => $ingreso->hora_ingreso,
+                    'fecha_ingreso' => $ingreso->fecha_ingreso,
+                    'hora_salida' => optional($ingreso->salida)->hora_salida ?? '-',
+                    'fecha_salida' => optional($ingreso->salida)->fecha_salida ?? '-',
+                    'id_espacio' => $ingreso->id_espacio,
+                    'placa' => $ingreso->placa_vehiculo ?? $ingreso->vehiculo->placa,
 
+                ];
+            });
+    
+        return response()->json($ingresos);
+    }
+
+    public function obtenerIngresosPorFechaEspacio(Request $request)
+    {
+        $desde_fecha = $request->input('desde_fecha');
+        $hasta_fecha = $request->input('hasta_fecha');
+        $id_espacio = $request->input('id_espacio');
+    
+        $ingresos = Ingreso::with(['vehiculo', 'salida'])
+            ->whereBetween('fecha_ingreso', [$desde_fecha, $hasta_fecha])->where('id_espacio',$id_espacio)
+            ->get()
+            ->map(function ($ingreso) {
+                return [
+                    'id_ingreso' => $ingreso->id_ingreso,
+                    'hora_ingreso' => $ingreso->hora_ingreso,
+                    'fecha_ingreso' => $ingreso->fecha_ingreso,
+                    'hora_salida' => optional($ingreso->salida)->hora_salida ?? '-',
+                    'fecha_salida' => optional($ingreso->salida)->fecha_salida ?? '-',
+                    // 'id_espacio' => $ingreso->id_espacio,
+                    'placa' => $ingreso->placa_vehiculo ?? $ingreso->vehiculo->placa,
+
+                    // 'id_guardia' => $ingreso->id_guardia,
+                    // 'id_bloque' => $ingreso->id_bloque,
+                    // 'id_reserva' => $ingreso->id_reserva,
+                    
+
+                ];
+            });
+    
+        return response()->json($ingresos);
+    }
+
+    public function obtenerCobrosPorFecha (Request $request) {
+        $desde_fecha = $request->input('desde_fecha');
+        $hasta_fecha = $request->input('hasta_fecha');
+    
+        $cobros = Cobro::whereBetween('fecha', [$desde_fecha, $hasta_fecha])->get();
+        $total = Cobro::whereBetween('fecha', [$desde_fecha, $hasta_fecha])->sum('monto');
+    
+        return response()->json([
+            "data" => $cobros,
+            "total" => $total
+        ]);
+    }
+
+    public function obtenerCobrosPorFechaEspacio (Request $request){
+        $desde_fecha = $request->input('desde_fecha');
+        $hasta_fecha = $request->input('hasta_fecha');
+        $id_espacio = $request->input('id_espacio');
+
+        $cobros = Cobro::whereBetween('fecha', [$desde_fecha, $hasta_fecha])
+        ->where('id_espacio',$id_espacio)->get();
+        $total = Cobro::whereBetween('fecha', [$desde_fecha, $hasta_fecha])
+        ->where('id_espacio',$id_espacio)->sum('monto');
+    
+        return response()->json([
+            "data" => $cobros,
+            "total" => $total
+        ]);
+    }
+
+    public function pagoEfectivo (Request $request) {
+        date_default_timezone_set('America/Manaus');
+
+        $id_usuario = auth()->user()->id;
+
+        $datosUsuario = User::where('id', $id_usuario)->first();
+        $nombre = $datosUsuario->name . ' ' .$datosUsuario->apellido_paterno . ' ' . $datosUsuario->apellido_materno;
+
+        $fechaHoraActual = new DateTime();
+        $fechaCreada = $fechaHoraActual->format('Y-m-d');
+        $horaCreada = $fechaHoraActual->format('H:i:s');
+
+        $cobro = new Cobro();
+        $cobro->placa_vehiculo = $request->placa;
+        $cobro->fecha = $fechaCreada;
+        $cobro->hora = $horaCreada;
+        $cobro->origen = 'salida';
+        $cobro->metodo = 'Efectivo';
+        $cobro->id_origen = $request->id_salida;
+        $cobro->id_usuario = $nombre;
+        $cobro->monto = $request->monto;
+        $cobro->id_espacio = $request->id_espacio;
+        $cobro->save();
+
+        return response([
+            'status' => '1',
+            'msg' => 'reserva pagada',
+        ]);
+    }
+
+    public function pagoQr (Request $request) {
+        date_default_timezone_set('America/Manaus');
+
+        $id_usuario = auth()->user()->id;
+
+        $datosUsuario = User::where('id', $id_usuario)->first();
+        $nombre = $datosUsuario->name . ' ' .$datosUsuario->apellido_paterno . ' ' . $datosUsuario->apellido_materno;
+
+        $fechaHoraActual = new DateTime();
+        $fechaCreada = $fechaHoraActual->format('Y-m-d');
+        $horaCreada = $fechaHoraActual->format('H:i:s');
+
+        $cobro = new Cobro();
+        $cobro->placa_vehiculo = $request->placa;
+        $cobro->fecha = $fechaCreada;
+        $cobro->hora = $horaCreada;
+        $cobro->origen = 'salida';
+        $cobro->metodo = 'QR';
+        $cobro->id_origen = $request->id_salida;
+        $cobro->id_usuario = $nombre;
+        $cobro->monto = $request->monto;
+        $cobro->id_espacio = $request->id_espacio;
+        $cobro->save();
+
+        return response([
+            'status' => '1',
+            'msg' => 'reserva pagada',
+        ]);
+    }
 }

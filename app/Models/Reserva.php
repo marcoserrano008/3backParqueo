@@ -25,6 +25,9 @@ class Reserva extends Model
         'reservada_desde_horaG1',
         'reservada_desde_fechaG2',
         'reservada_desde_horaG2',
+        'tipo',
+        'costo',
+        'pagada',
     ];
 
     public $timestamps = false;
@@ -32,5 +35,9 @@ class Reserva extends Model
     public function vehiculo()
     {
     return $this->belongsTo(Vehiculo::class, 'id_vehiculo');
+    }
+    public function salida()
+    {
+        return $this->hasOne('App\Models\Salida', 'id_ingreso');
     }
 }
