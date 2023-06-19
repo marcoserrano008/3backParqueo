@@ -13,6 +13,7 @@ class espacioController extends Controller
 {
     public function listEspacios()
     {
+        date_default_timezone_set('America/Manaus');
         $now = new \DateTime();
     
         $espacios = Espacio::with(['reservas' => function($query) use ($now) {
