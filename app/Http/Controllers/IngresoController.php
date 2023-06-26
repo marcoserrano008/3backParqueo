@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Cliente;
 use App\Models\Cobro;
 use App\Models\Ingreso;
 use App\Models\User;
@@ -181,6 +182,36 @@ class IngresoController extends Controller
                     'id_espacio' => $ingreso->id_espacio,
                     'placa' => $ingreso->placa_vehiculo ?? $ingreso->vehiculo->placa,
 
+                ];
+            });
+    
+        return response()->json($ingresos);
+    }
+
+    public function obtenerIngresosPorFechaUsuario(Request $request)
+    {
+        $id_usuario = auth()->user()->id;
+        $cliente = Cliente::where('id_usuario',$id_usuario)->first();
+    
+        $desde_fecha = $request->input('desde_fecha');
+        $hasta_fecha = $request->input('hasta_fecha');
+    
+        // Obtén los ids de los vehículos del cliente
+        $ids_vehiculos_cliente = Vehiculo::where('id_cliente', $cliente->id)->pluck('id_vehiculo');
+    
+        $ingresos = Ingreso::with(['vehiculo', 'salida'])
+            ->whereIn('id_vehiculo', $ids_vehiculos_cliente) // Filtra los ingresos por los vehículos del cliente
+            ->whereBetween('fecha_ingreso', [$desde_fecha, $hasta_fecha])
+            ->get()
+            ->map(function ($ingreso) {
+                return [
+                    'id_ingreso' => $ingreso->id_ingreso,
+                    'hora_ingreso' => $ingreso->hora_ingreso,
+                    'fecha_ingreso' => $ingreso->fecha_ingreso,
+                    'hora_salida' => optional($ingreso->salida)->hora_salida ?? '-',
+                    'fecha_salida' => optional($ingreso->salida)->fecha_salida ?? '-',
+                    'id_espacio' => $ingreso->id_espacio,
+                    'placa' => $ingreso->placa_vehiculo ?? $ingreso->vehiculo->placa,
                 ];
             });
     

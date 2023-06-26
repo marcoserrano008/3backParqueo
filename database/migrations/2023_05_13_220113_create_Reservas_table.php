@@ -33,8 +33,6 @@ return new class extends Migration
             $table->string('tipo')->default(null)->nullable();
             $table->double('costo')->default(null)->nullable();
             $table->string('pagada')->default('no');
-            
-
         });
     }
 

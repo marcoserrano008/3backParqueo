@@ -13,11 +13,6 @@ class SalidasParqueoTableSeeder extends Seeder
      */
     public function run(): void
     {
-        DB::table('SalidasParqueo')->insert([
-            "id_vehiculo" => '2',
-            "hora_salida" => '18:30',
-            "fecha_salida" => '2023-05-16',
-            "id_ingreso" => '1',
-        ]);
+
     }
 }

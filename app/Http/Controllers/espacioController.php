@@ -14,11 +14,12 @@ class espacioController extends Controller
     public function listEspacios()
     {
         date_default_timezone_set('America/Manaus');
-        $now = new \DateTime();
+    
+        $now = new DateTime();
     
         $espacios = Espacio::with(['reservas' => function($query) use ($now) {
-            $query->where('reservada_desde_fecha', '<=', $now->format('Y-m-d'))
-                ->where('reservada_hasta_fecha', '>=', $now->format('Y-m-d'));
+            $query->whereRaw("CONCAT(reservada_desde_fecha, ' ', reservada_desde_hora) <= ?", [$now->format('Y-m-d H:i:s')])
+                  ->whereRaw("CONCAT(reservada_hasta_fecha, ' ', reservada_hasta_hora) >= ?", [$now->format('Y-m-d H:i:s')]);
         }])->get();
     
         $espacios->each(function ($espacio) use ($now) {
@@ -26,9 +27,8 @@ class espacioController extends Controller
             if ($espacio->estado == 'ocupado') {
                 $espacio->estado = 'ocupado';
             } elseif ($espacio->estado == 'deshabilitado') {
-                // Mantiene el estado como 'deshabilitado' si ya está así
                 $espacio->estado = 'deshabilitado';
-            } elseif ($reserva && new \DateTime($reserva->reservada_desde_fecha) <= $now && new \DateTime($reserva->reservada_hasta_fecha) >= $now) {
+            } elseif ($reserva && new DateTime($reserva->reservada_desde_fecha . ' ' . $reserva->reservada_desde_hora) <= $now && new DateTime($reserva->reservada_hasta_fecha . ' ' . $reserva->reservada_hasta_hora) >= $now) {
                 $espacio->estado = 'reservado';
             } else {
                 $espacio->estado = 'libre';
@@ -38,6 +38,7 @@ class espacioController extends Controller
     
         return $espacios;
     }
+    
 
     public function countEspacios()
 {

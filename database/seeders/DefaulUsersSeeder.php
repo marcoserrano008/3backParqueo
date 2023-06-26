@@ -30,6 +30,18 @@ class DefaulUsersSeeder extends Seeder
                 'celular' => '69459869',
             ],
             [
+                'name' => 'guardia2',
+                'email' => 'guardia2@guardia2.com',
+                'apellido_paterno' => 'apellido',
+                'apellido_materno' => 'apellido',
+                'ci' => '123321',
+                'password' => Hash::make('guardia2'),
+                'rol' => 'guardia',
+                'fecha_nacimiento' => Carbon::parse('1990-01-01'),
+                'created_at' => '2023-01-01 01:01:01',
+                'celular' => '69459869',
+            ],
+            [
                 'name' => 'administrador',
                 'email' => 'admin@admin.com',
                 'apellido_paterno' => 'apellido',

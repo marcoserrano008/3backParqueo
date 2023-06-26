@@ -44,6 +44,9 @@ Route::middleware('auth:sanctum')->group(function() {
     //Rutas para las reservas
     
     Route::post('create-reserva', [ReservaController::class, 'createReserva']);
+    Route::post('create-reserva-rango', [ReservaController::class, 'createReservaRango']);
+
+    
     Route::get('list-active-reservas', [ReservaController::class, 'listActiveReservas']);
     Route::get('list-expired-reservas', [ReservaController::class, 'listExpiredReservas']);
     Route::get('list-reservas', [ReservaController::class, 'listReservas']);
@@ -53,6 +56,8 @@ Route::middleware('auth:sanctum')->group(function() {
     Route::get('show-reserva/{id}', [ReservaController::class, 'showReservaId']);
     Route::put('update-reserva/{id}', [ReservaController::class, 'updateReserva']);
     Route::delete('delete-reserva/{id}', [ReservaController::class, 'deleteReserva']);
+    Route::delete('delete-multiple-reservas', [ReservaController::class, 'deleteMultipleReservas']);
+
     Route::get('list-reservas-placa/{placa}', [ReservaController::class, 'showReservasPlaca']);
 
     Route::post('verificar-reserva-placa', [ReservaController::class, 'verificarReserva']);
@@ -84,6 +89,7 @@ Route::middleware('auth:sanctum')->group(function() {
     //para pagar una reserva
     
     Route::post('pagar-reserva', [ReservaController::class, 'pagarReserva']);
+    Route::post('pagar-varias-reservas', [ReservaController::class, 'pagarVariasReservas']);
 
     //Subir comunicados
     Route::post('/posts', [PostController::class, 'store']);
@@ -112,7 +118,12 @@ Route::middleware('auth:sanctum')->group(function() {
 
     Route::get('list-all-usuarios', [UserController::class, 'listAllUsers']);
 
-    Route::post('enviar-mesaje', [WhatsappController::class, 'sendMessage']);
+    Route::post('enviar-mensaje', [WhatsappController::class, 'sendMessage']);
+
+    //historial
+    Route::post('ingresos-por-fecha-usuario', [IngresoController::class, 'obtenerIngresosPorFechaUsuario']);
+    Route::post('reservas-por-fecha-usuario', [ReservaController::class, 'obtenerReservasPorUsuario']);
+
 });
 
 

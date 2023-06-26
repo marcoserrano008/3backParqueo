@@ -24,6 +24,7 @@ class UserResource extends JsonResource
             'apellido_paterno' => $this->apellido_paterno,
             'apellido_materno' => $this->apellido_materno,
             'fecha_nacimiento' => $this->fecha_nacimiento,
+            'celular' => $this->celular,
         ];
     }
 }
